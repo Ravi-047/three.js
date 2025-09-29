@@ -1,9 +1,11 @@
 import * as THREE from 'three'
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
+import { GLTFLoader, OrbitControls } from 'three/examples/jsm/Addons.js'
 import GUI from 'lil-gui'
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
-import halftoneVertexShader from './shaders/halftone/vertex.glsl'
-import halftoneFragmentShader from './shaders/halftone/fragment.glsl'
+import halftoneVertexShader from './shaders/halftone/vertex.glsl?raw'
+import halftoneFragmentShader from './shaders/halftone/fragment.glsl?raw'
+
+
+
 
 /**
  * Base
@@ -29,12 +31,14 @@ const sizes = {
     pixelRatio: Math.min(window.devicePixelRatio, 2)
 }
 
-window.addEventListener('resize', () =>
-{
+window.addEventListener('resize', () => {
     // Update sizes
     sizes.width = window.innerWidth
     sizes.height = window.innerHeight
     sizes.pixelRatio = Math.min(window.devicePixelRatio, 2)
+
+    // updated materials
+    material.uniforms.uResolution.value.set(sizes.width * sizes.pixelRatio, sizes.height * sizes.pixelRatio)
 
     // Update camera
     camera.aspect = sizes.width / sizes.height
@@ -75,8 +79,7 @@ renderer.setPixelRatio(sizes.pixelRatio)
 
 gui
     .addColor(rendererParameters, 'clearColor')
-    .onChange(() =>
-    {
+    .onChange(() => {
         renderer.setClearColor(rendererParameters.clearColor)
     })
 
@@ -85,6 +88,8 @@ gui
  */
 const materialParameters = {}
 materialParameters.color = '#ff794d'
+materialParameters.shadowColor = '#8e19b8'
+materialParameters.lightColor = '#e5ffe0'
 
 const material = new THREE.ShaderMaterial({
     vertexShader: halftoneVertexShader,
@@ -93,15 +98,28 @@ const material = new THREE.ShaderMaterial({
     {
         uColor: new THREE.Uniform(new THREE.Color(materialParameters.color)),
         uShadeColor: new THREE.Uniform(new THREE.Color(materialParameters.shadeColor)),
+        uResolution: new THREE.Uniform(new THREE.Vector2(sizes.width * sizes.pixelRatio, sizes.height * sizes.pixelRatio)),
+        uShadowRepetitions: new THREE.Uniform(200.0),
+        uShadowColor: new THREE.Uniform(new THREE.Color(materialParameters.shadowColor)),
+        uLightShadowRepetitions: new THREE.Uniform(150.0),
+        uLightColor: new THREE.Uniform(new THREE.Color(materialParameters.lightColor))
     }
 })
 
 gui
     .addColor(materialParameters, 'color')
-    .onChange(() =>
-    {
+    .onChange(() => {
         material.uniforms.uColor.value.set(materialParameters.color)
     })
+
+gui.add(material.uniforms.uShadowRepetitions, 'value').min(1).max(300).step(1).name('shadowRepetitions')
+gui.addColor(materialParameters, 'shadowColor').name('shadowColor').onChange(() => {
+    material.uniforms.uShadowColor.value.set(materialParameters.shadowColor)
+})
+gui.add(material.uniforms.uLightShadowRepetitions, 'value').min(1).max(300).step(1).name('lightShadowRepetitions')
+gui.addColor(materialParameters, 'lightColor').name('lightColor').onChange(() => {
+    material.uniforms.uLightColor.value.set(materialParameters.lightColor)
+})
 
 /**
  * Objects
@@ -126,12 +144,10 @@ scene.add(sphere)
 let suzanne = null
 gltfLoader.load(
     './suzanne.glb',
-    (gltf) =>
-    {
+    (gltf) => {
         suzanne = gltf.scene
-        suzanne.traverse((child) =>
-        {
-            if(child.isMesh)
+        suzanne.traverse((child) => {
+            if (child.isMesh)
                 child.material = material
         })
         scene.add(suzanne)
@@ -143,13 +159,11 @@ gltfLoader.load(
  */
 const clock = new THREE.Clock()
 
-const tick = () =>
-{
+const tick = () => {
     const elapsedTime = clock.getElapsedTime()
 
     // Rotate objects
-    if(suzanne)
-    {
+    if (suzanne) {
         suzanne.rotation.x = - elapsedTime * 0.1
         suzanne.rotation.y = elapsedTime * 0.2
     }

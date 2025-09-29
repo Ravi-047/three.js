@@ -17,8 +17,22 @@ export default {
         sourcemap: true // Add sourcemap
     },
     plugins:
-    [
-        restart({ restart: [ '../static/**', ] }), // Restart server on static file change
-        glsl() // Handle shader files
-    ]
+        [
+            restart({ restart: ['../static/**',] }), // Restart server on static file change
+            glsl({
+                include: [                      // Glob pattern, or array of glob patterns to import
+                    '**/*.glsl', '**/*.wgsl',
+                    '**/*.vert', '**/*.frag',
+                    '**/*.vs', '**/*.fs'
+                ],
+                exclude: undefined,             // Glob pattern, or array of glob patterns to ignore
+                defaultExtension: 'glsl',       // Shader suffix to use when no extension is specified
+                warnDuplicatedImports: true,    // Warn if the same chunk was imported multiple times
+                removeDuplicatedImports: false, // Automatically remove an already imported chunk
+                importKeyword: '#include',      // Keyword used to import shader chunks
+                minify: false,                  // Minify/optimize output shader code
+                watch: true,                    // Recompile shader on change
+                root: '/'
+            }) // Handle shader files
+        ]
 }
